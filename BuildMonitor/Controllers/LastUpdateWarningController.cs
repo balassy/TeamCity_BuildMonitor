@@ -14,6 +14,18 @@ namespace BuildMonitor.Controllers
         {
             const int limitInSeconds = 60 * 60 * 25; // 25 hours
 
+            // Check if last update warning is enabled.
+            if (Settings.Current.LastUpdateWarning == null)
+            {
+                LastUpdateWarningResponse okayResponse = new LastUpdateWarningResponse
+                {
+                    IsOverdue = false,
+                    Message = "OK"
+                };
+
+                return Json(okayResponse, JsonRequestBehavior.AllowGet);                
+            }
+
             // Get the build configuration ID from the configuration file.
             string buildConfigurationId = Settings.Current.LastUpdateWarning.Id;
 
