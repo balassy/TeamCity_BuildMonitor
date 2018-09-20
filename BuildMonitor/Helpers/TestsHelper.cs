@@ -215,15 +215,25 @@ namespace BuildMonitor.Helpers
 			string buildJsonString = RequestHelper.GetJson(url);
 			dynamic buildJson = JsonConvert.DeserializeObject<dynamic>(buildJsonString);
 
-			dynamic testResults = buildJson.testOccurrences;
+		    BuildDetails result = new BuildDetails
+		    {
+		        Number = (string) buildJson.number
+		    };
 
-			BuildDetails result = new BuildDetails
-			{
-				Number = (string)buildJson.number,
-				PassedCount = testResults != null && testResults.passed != null ? (int)testResults.passed : 0,
-				FailedCount = testResults != null && testResults.failed != null ? (int)testResults.failed : 0,
-				IgnoredCount = testResults != null && testResults.ignored != null ? (int)testResults.ignored : 0
-			};
+			dynamic testResults = buildJson.testOccurrences;
+		    if (testResults != null)
+		    {
+		        result.PassedCount = testResults.passed != null ? (int) testResults.passed : 0;
+		        result.FailedCount = testResults.failed != null ? (int) testResults.failed : 0;
+		        result.IgnoredCount = testResults.ignored != null ? (int) testResults.ignored : 0;
+		    }
+		    else
+		    {
+		        TestRunResult testResult = TestsHelper.GetTestResultsFromBuildStatistics(buildId);
+		        result.PassedCount = testResult.PassedCount;
+		        result.FailedCount = testResult.FailedCount;
+		        result.IgnoredCount = testResult.IgnoredCount;
+		    }
 
 			if (buildJson.finishDate != null)
 			{
@@ -275,5 +285,32 @@ namespace BuildMonitor.Helpers
 
 			return result;
 		}
+
+	    private static TestRunResult GetTestResultsFromBuildStatistics(int buildId)
+	    {
+	        string url = String.Format(CultureInfo.InvariantCulture, TestsHelper.BuildStatisticsUrl, buildId);
+	        string buildStatisticsJsonString = RequestHelper.GetJson(url);
+	        dynamic buildStatisticsJson = JsonConvert.DeserializeObject<dynamic>(buildStatisticsJsonString);
+
+	        TestRunResult result = new TestRunResult();
+
+	        foreach (dynamic property in buildStatisticsJson.property)
+	        {
+	            switch ((string) property.name)
+	            {
+	                case "PassedTestCount":
+	                    result.PassedCount = (int) property.value;
+                        break;
+                    case "FailedTestCount":
+                        result.FailedCount = (int) property.value;
+                        break;
+                    case "IgnoredTestCount":
+                        result.IgnoredCount = (int) property.value;
+                        break;	                    
+	            }
+	        }
+
+	        return result;
+	    }
 	}
 }
